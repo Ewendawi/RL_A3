@@ -4,4 +4,4 @@ results/*
 experiments/*
 images/*
 models/*
-test.py
+test*.py

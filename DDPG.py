@@ -32,7 +32,7 @@ class DDPGActor(AbstractActor):
     def take_action(self, state):
         state = torch.tensor(state, dtype=torch.float32).view(1,-1).to(self.config.device)
         action = self.policy_net(state)
-        noise = torch.normal(0, self.config.noise_std, (1,))
+        noise = torch.normal(0, self.config.noise_std, (1,)).to(self.config.device)
         noise = torch.clamp(noise, -self.config.noise_clip, self.config.noise_clip)
         action = action + noise
         # action = torch.clamp(action, -self.config.action_bound, self.config.action_bound)

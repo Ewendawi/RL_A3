@@ -1,5 +1,4 @@
 
-from random import sample
 import sys
 import getopt
 from common.expConfig import join_processes, clean_processes, run_experiment
@@ -12,6 +11,8 @@ from PPOClip import PPOClip, exp_config_for_PPOClip
 
 USE_MULTI_PROCESS = True
 DEVICE_NAME = "cpu"
+# if torch.backends.mps.is_available():
+#     DEVICE_NAME = "mps"
 
 # experiment for reinforce
 def experiment_reinforce():
@@ -26,6 +27,10 @@ def experiment_reinforce():
     actor_lr = 1e-3
     critic_lr = 1e-2
 
+    env_name = "MountainCar-v0"
+    actor_lr = 1e-4
+    critic_lr = 1e-3
+
     # env_name = "Pendulum-v1"
     # standardize_reward = True
     # reward_uppper_bound = 0.0
@@ -38,7 +43,7 @@ def experiment_reinforce():
     actor_lr = 1e-5
     critic_lr = 1e-4 
 
-    exp_name = f"reinforce-r{repeat}-t{time_steps}-bs{batch_size}"
+    exp_name = f"reinforce-{env_name}-r{repeat}-t{time_steps}"
 
     exp_config = exp_config_for_reinforce(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
     exp_config.critic_config.use_base_line = True
@@ -167,33 +172,46 @@ def experiment_PPO():
     dirs = []
     run_multi_process = USE_MULTI_PROCESS and False
     repeat = 1
-    batch_size = 0
+    batch_size = 64
     standardize_reward = False
     sample_size = 2048
+    eval_interval = 3000
 
     env_name = "CartPole-v1"
     time_steps = 50000
     sample_size = 256
     actor_lr = 1e-3
-    critic_lr = 1e-2
+    critic_lr = 3e-3
 
-    env_name = "Pendulum-v1"
-    time_steps = 200000
-    sample_size = 256
-    standardize_reward = True
-    reward_uppper_bound = 0.0
-    reward_low_bound = -16.0
-    actor_lr = 1e-4
-    critic_lr = 1e-3
+    env_name = "MountainCar-v0"
+    batch_size = 32
+    time_steps = 1000000
+    # eval_interval = 10000000
+    sample_size = 2048
+    actor_lr = 1e-3
+    critic_lr = 3e-3
+
+    # env_name = "Pendulum-v1"
+    # time_steps = 200000
+    # sample_size = 256
+    # standardize_reward = True
+    # reward_uppper_bound = 0.0
+    # reward_low_bound = -16.0
+    # actor_lr = 1e-4
+    # critic_lr = 1e-3
 
     # env_name = "Ant-v4"
     # time_steps = 200000
     # actor_lr = 1e-4
     # critic_lr = 1e-3
 
-    exp_name = f"PPO-r{repeat}-t{time_steps}-bs{batch_size}"
+    exp_name = f"PPO-{env_name}-r{repeat}-t{time_steps}"
 
     exp_config = exp_config_for_PPOClip(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+    exp_config.actor_config.batch_size = batch_size
+    exp_config.critic_config.batch_size = batch_size
+    
+    exp_config.eval_interval = eval_interval
     exp_config.actor_config.learning_rate = actor_lr
     exp_config.critic_config.learning_rate = critic_lr
     exp_config.critic_config.max_episode_length = sample_size
@@ -223,7 +241,7 @@ def experiment_PPO():
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    experiment = 2
+    experiment = 3
     try:
         opts, args = getopt.getopt(argv,"he:", ["disable_multi_process", "device="])
     except getopt.GetoptError:

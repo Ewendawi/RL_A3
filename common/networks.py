@@ -62,7 +62,7 @@ class ContinuousPolicyNetwork(torch.nn.Module):
                 self.fcs.append(torch.nn.Linear(layers_dim[i-1], dim))
         self.fc_mu = torch.nn.Linear(layers_dim[-1], output_size)
         self.fc_std = torch.nn.Linear(layers_dim[-1], output_size)
-        self.output_bound = torch.tensor(output_bound)
+        self.output_bound = output_bound
 
     def forward(self, x):
         for fc in self.fcs:

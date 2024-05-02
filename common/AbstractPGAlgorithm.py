@@ -184,14 +184,15 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
 
         if done or truncated:
             state = env.reset(seed=seed)[0]
-
             eposode_train_return_list.append(eposode_train_return)
             eposode_train_return = 0
             episode += 1
+            if not eval_env:
+                print(f"episode:{episode},timestep:{i}/{time_steps},train:{eposode_train_return_list[-1]:.1f}, critic_loss:{episode_critic_loss_list[-1]:.4f}, actor_loss:{episode_actor_loss_list[-1]:.4f}")
         else:
             state = state_
 
-        if i % eval_interval == 0:
+        if eval_env and i % eval_interval == 0:
             time_steps_list.append(i)
 
             eval_return = evalate_model(eval_env, model, eval_episodes, seed=seed)
@@ -207,7 +208,7 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
             mean_actor_loss = np.mean(episode_actor_loss_list)
             actore_loss_list.append(mean_actor_loss)
             episode_critic_loss_list = []
-            print(f"timestep:{i}/{time_steps},train:{mean_train_return:.1f}, eval:{eval_return:.1f}, critic_loss:{mean_critic_loss:.4f}, actor_loss:{mean_actor_loss:.4f}")
+            print(f"episode:{episode},timestep:{i}/{time_steps},train:{mean_train_return:.1f}, eval:{eval_return:.1f}, critic_loss:{mean_critic_loss:.4f}, actor_loss:{mean_actor_loss:.4f}")
 
     result = {
         "eval": eval_return_list,

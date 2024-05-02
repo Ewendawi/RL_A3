@@ -13,7 +13,8 @@ class StochasticActor(AbstractActor):
     def __init__(self, config):
         super(StochasticActor, self).__init__(config)
         if self.config.continuous_action_space:
-            self.policy_net = ContinuousPolicyNetwork(config.input_size, config.layers_dim, config.output_size, config.action_bound).to(config.device)
+            action_bound = torch.tensor(config.action_bound, dtype=torch.float32).to(config.device)
+            self.policy_net = ContinuousPolicyNetwork(config.input_size, config.layers_dim, config.output_size, action_bound).to(config.device)
         else:
             self.policy_net = DiscretePolicyNetwork(config.input_size, config.layers_dim, config.output_size).to(config.device)
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=config.learning_rate)
@@ -48,7 +49,7 @@ class StochasticActor(AbstractActor):
         with torch.no_grad():
             state = torch.tensor(state, dtype=torch.float32).view(1,-1).to(self.config.device)
             action_dist = self.action_distribution(state)
-            action = action_dist.sample()
+            action = action_dist.sample().cpu()
             if self.config.continuous_action_space:
                 # shift action to the action bound
                 action = action + self.config.action_low_bound + self.config.action_bound
@@ -69,7 +70,7 @@ class StochasticActor(AbstractActor):
             log_probs = self.log_probs_with_dists(dists, actions[i:j])
             entropy = self.entropy_with_dists(dists)
             loss = -torch.mean(log_probs * psi_values[i:j] - self.config.entropy_weight * entropy)
-            total_loss.append(loss.detach())
+            total_loss.append(loss.detach().cpu())
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -77,11 +78,11 @@ class StochasticActor(AbstractActor):
 
         return np.mean(total_loss)
 
-def GAE_estimate(rewards, values, dones, gamma, lam):
+def GAE_estimate(rewards, values, dones, gamma, lam, next_value=0):
     T = len(rewards)
-    advantages = torch.zeros(T)
+    advantages = torch.zeros(T).to(values.device)
     gae = 0
-    next_value = 0
+    next_value = next_value
     for t in reversed(range(T)):
         reward = rewards[t]
         value = values[t]
@@ -165,7 +166,7 @@ class NormalCritic(AbstractCritic):
                 self.value_net_optimizer.step()
 
                 state_values.append(b_state_values)
-                total_loss.append(value_loss.detach())
+                total_loss.append(value_loss.detach().cpu())
             state_values = torch.cat(state_values, dim=0)
         else:
             state_values = torch.zeros_like(returns)

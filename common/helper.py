@@ -136,7 +136,7 @@ class replayBuffer:
         else:
             batch = random.sample(self.mem, batch_size)
             states, actions, rewards, states_, terminal = zip(*batch)
-            return np.array(states), actions, rewards, np.array(states_), terminal
+            return np.array(states), np.array(actions), rewards, np.array(states_), terminal
     
     def size(self):
         return len(self.mem)

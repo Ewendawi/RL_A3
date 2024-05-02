@@ -70,14 +70,16 @@ def PPO_baseline():
     env_name = "Pendulum-v1"
     # env_name = "CartPole-v1"
     env_name = "Ant-v4"
+    env_name = "MountainCar-v0"
+    # env_name = "MountainCarContinuous-v0"
 
     now = time.strftime("%m%d_%H_%M_%S", time.localtime(time.time()))
     file_path = f"./models/sb3_ppo_{env_name}_{now}"
     
-    vec_env = make_vec_env(env_name, n_envs=4)
+    vec_env = make_vec_env(env_name, n_envs=1)
 
-    model = PPO("MlpPolicy", vec_env, verbose=1)
-    model.learn(total_timesteps=200000)
+    model = PPO("MlpPolicy", vec_env, verbose=1, tensorboard_log="./logs/")
+    model.learn(total_timesteps=1000000)
     model.save(file_path)
 
     # del model # remove to demonstrate saving and loading
@@ -99,5 +101,5 @@ def PPO_baseline():
             r = 0
 
 # A2C_baseline()
-# PPO_baseline()
-DDPG_baseline()
+PPO_baseline()
+# DDPG_baseline()

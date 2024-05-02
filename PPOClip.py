@@ -22,48 +22,75 @@ class PPOCritic(NormalCritic):
         self.config = config
 
     def updateWithActor(self, samples, actor: StochasticActor):
-        states, actions, rewards, states_, dones = samples
+        g_states, g_actions, g_rewards, g_states_, g_dones = samples
+        clip = torch.tensor(self.config.clip).to(self.config.device)
 
-        returns = self.returns_of_episode(rewards, states, states_, dones).detach()
+        # returns = self.returns_of_episode(rewards, states, states_, dones).detach()
+        g_values = self.value_net(g_states).detach()
         if not self.config.recompute_gae:
-            gae = GAE_estimate(rewards, self.value_net(states), dones, self.config.gamma, self.config.gae_lambda)
-            gae = gae.view(-1,1).detach()
+            g_gae = GAE_estimate(g_rewards, g_values, g_dones, self.config.gamma, self.config.gae_lambda)
+            g_gae = g_gae.view(-1,1).detach()
+        g_returns = g_gae + g_values
 
-        dists = actor.action_distribution(states)
-        base_log_probs = actor.log_probs_with_dists(dists, actions).detach()
+        dists = actor.action_distribution(g_states)
+        g_base_log_probs = actor.log_probs_with_dists(dists, g_actions).detach()
         
         actor_loss_list = []
         value_loss_list = []
+        batch_indeices = np.arange(g_states.shape[0])
         for _ in range(self.config.repeat):
-            dists = actor.action_distribution(states)
-            log_probs = actor.log_probs_with_dists(dists, actions) 
+            np.random.shuffle(batch_indeices)
+            batch_size = self.config.batch_size
+            batch_size = len(batch_indeices) if batch_size == 0 else batch_size
+            for i in range(0, len(batch_indeices), batch_size):
+                states = g_states[batch_indeices[i:i+batch_size]]
+                actions = g_actions[batch_indeices[i:i+batch_size]]
+                rewards = g_rewards[batch_indeices[i:i+batch_size]]
+                dones = g_dones[batch_indeices[i:i+batch_size]]
+                returns = g_returns[batch_indeices[i:i+batch_size]]
+                base_log_probs = g_base_log_probs[batch_indeices[i:i+batch_size]]
+                gae = g_gae[batch_indeices[i:i+batch_size]]
+                
+                dists = actor.action_distribution(states)
+                log_probs = actor.log_probs_with_dists(dists, actions) 
 
-            if self.config.recompute_gae:
-                gae = GAE_estimate(rewards, self.value_net(states), dones, self.config.gamma, self.config.gae_lambda)
-                gae = gae.view(-1,1).detach()
+                if self.config.recompute_gae:
+                    gae = GAE_estimate(rewards, self.value_net(states), dones, self.config.gamma, self.config.gae_lambda)
+                    gae = gae.view(-1,1).detach()
 
-            ratio = torch.exp(log_probs - base_log_probs)
-            clipped_ratio_loss = torch.clamp(ratio, 1 - self.config.clip, 1 + self.config.clip) * gae
-            ratio_loss = ratio * gae
-            if self.config.dual_clip >= 1:
-                clip1 = torch.min(clipped_ratio_loss, ratio_loss)
-                clip2 = torch.max(clip1, self.config.dual_clip * gae) 
-                actor_loss = -torch.where(gae < 0, clip2, clip1).mean()
-            else:
-                actor_loss = -torch.min(clipped_ratio_loss, ratio_loss).mean()
-            actor_loss = actor_loss - actor.config.entropy_weight * dists.entropy().mean()
-            actor.optimizer.zero_grad()
-            actor_loss.backward()
-            actor.optimizer.step()
-            actor_loss_list.append(actor_loss.detach())
+                # gae = (gae - gae.mean()) / (gae.std() + 1e-8)
 
-            # calculate value network loss
-            state_values = self.value_net(states)
-            value_loss = torch.nn.functional.mse_loss(state_values, returns.detach()) 
-            self.value_net_optimizer.zero_grad()
-            value_loss.backward()
-            self.value_net_optimizer.step()
-            value_loss_list.append(value_loss.detach())
+                ratio = torch.exp(log_probs - base_log_probs)
+                clipped_ratio_loss = torch.clamp(ratio, 1 - clip, 1 + clip) * gae
+                ratio_loss = ratio * gae
+                if self.config.dual_clip >= 1:
+                    clip1 = torch.min(clipped_ratio_loss, ratio_loss)
+                    clip2 = torch.max(clip1, self.config.dual_clip * gae) 
+                    actor_loss = -torch.where(gae < 0, clip2, clip1).mean()
+                else:
+                    actor_loss = -torch.min(clipped_ratio_loss, ratio_loss).mean()
+
+                actor_loss = actor_loss - actor.config.entropy_weight * dists.entropy().mean()
+                state_values = self.value_net(states)
+                value_loss = torch.nn.functional.mse_loss(state_values, returns) 
+
+                use_total_loss = False
+
+                actor.optimizer.zero_grad()
+                self.value_net_optimizer.zero_grad()
+                if use_total_loss:
+                    loss = actor_loss + 0.5 * value_loss
+                    loss.backward()
+                else:
+                    actor_loss.backward()
+                    value_loss.backward()
+                torch.nn.utils.clip_grad_norm_(actor.policy_net.parameters(), 0.5)
+                torch.nn.utils.clip_grad_norm_(self.value_net.parameters(), 0.5)
+                actor.optimizer.step()
+                self.value_net_optimizer.step()
+
+                actor_loss_list.append(actor_loss.detach().cpu())
+                value_loss_list.append(value_loss.detach().cpu())
 
         return np.mean(value_loss_list), np.mean(actor_loss_list)
 
@@ -88,8 +115,8 @@ class PPOClip(AbstractPGAlgorithm):
         self.sample_buffer.store_transition(state, action, reward, next_state, done)
 
     def should_update(self, done, truncated):
-        # if done or truncated:
-        #     return True
+        if done or truncated:
+            return True
         if self.sample_buffer.size() >= self.critic.config.max_episode_length:
             return True
         return False
