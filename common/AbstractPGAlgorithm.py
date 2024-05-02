@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 import torch
 import gymnasium as gym
+from tensorboardX import SummaryWriter
 
 class ActorConfig:
     def __init__(self, device_name="cpu"):
@@ -162,6 +163,15 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
     critic_loss_list = []
     actore_loss_list = []
 
+    writer = None
+    if tensorboard_dir:
+        now = time.strftime("%m%d_%H_%M_%S", time.localtime(time.time()))
+        dir_path = f"./logs/{tensorboard_dir}_{now}"
+        writer = SummaryWriter(dir_path)
+    def write_to_tensorboard(key, value, i):
+        if writer:
+            writer.add_scalar(key, value, i)
+
     state = env.reset(seed=seed)[0]
 
     episode = 0
@@ -169,23 +179,30 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
     episode_actor_loss_list = []
     eposode_train_return_list = []
     eposode_train_return = 0
+    episode_length = 0
     for i in range(1, time_steps+1):
         action = model.take_action(state)
         if isinstance(env.action_space, gym.spaces.Discrete):
             action = action[0]
         state_, reward, done, truncated, _ = env.step(action)
         eposode_train_return += reward
+        episode_length += 1
 
         model.store_transition(state, action, reward, state_, done)
         if model.should_update(done, truncated):
             critic_loss, actor_loss = model.update()
             episode_critic_loss_list.append(critic_loss)
             episode_actor_loss_list.append(actor_loss)
+            write_to_tensorboard("loss/critic_loss", critic_loss, i)
+            write_to_tensorboard("loss/actor_loss", actor_loss, i)
 
         if done or truncated:
             state = env.reset(seed=seed)[0]
+            write_to_tensorboard("episode/return", eposode_train_return, i)
+            write_to_tensorboard("episode/length", episode_length, i)
             eposode_train_return_list.append(eposode_train_return)
             eposode_train_return = 0
+            episode_length = 0
             episode += 1
             if not eval_env:
                 print(f"episode:{episode},timestep:{i}/{time_steps},train:{eposode_train_return_list[-1]:.1f}, critic_loss:{episode_critic_loss_list[-1]:.4f}, actor_loss:{episode_actor_loss_list[-1]:.4f}")

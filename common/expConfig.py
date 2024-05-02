@@ -26,6 +26,8 @@ class ExpConfig:
         self.actor_config: ActorConfig 
         self.critic_config: CriticConfig 
 
+        self.tensorboard_dir = None
+
     def update_dir_name(self, suffix:str=""):
         self.dir_name = f"{self.exp_name}-{suffix}-{time.time()}"
 
@@ -71,7 +73,7 @@ def task(model, exp_config) -> None:
         results = train_model(env=exp_config.env, model=model, 
                               time_steps=exp_config.timesteps, 
                               eval_interval=exp_config.eval_interval, eval_env=exp_config.eval_env, eval_episodes=exp_config.eval_episodes, 
-                              seed=exp_config.seed)
+                              seed=exp_config.seed, tensorboard_dir=exp_config.tensorboard_dir)
         print(f"Time taken: {time.time() - start:.2f}s")
 
         for key, value in results.items():

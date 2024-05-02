@@ -219,6 +219,7 @@ def experiment_PPO():
     if standardize_reward:
         exp_config.critic_config.reward_uppper_bound = reward_uppper_bound
         exp_config.critic_config.reward_low_bound = reward_low_bound
+    exp_config.tensorboard_dir = f"{exp_name}"
     exp_config.update_dir_name("PPO")
 
     model = PPOClip(exp_config.actor_config, exp_config.critic_config)
