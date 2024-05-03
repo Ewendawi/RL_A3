@@ -6,6 +6,7 @@ Python  3.9.19 was used
 - torch
 - matplotlib
 - scipy
+- tensorboardX
 
 ## Usage
 ```shell

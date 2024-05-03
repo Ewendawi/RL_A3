@@ -11,7 +11,7 @@ class ActorConfig:
         self.layers_dim = [128]
         self.output_size = 2
         self.learning_rate = 0.001
-        self.batch_size = 0
+        self.batch_size = 64
         self.device = torch.device(device_name)
 
         self.entropy_weight = 0.0
@@ -43,7 +43,7 @@ class CriticConfig:
         self.input_size = 4
         self.layers_dim = [128]
         self.learning_rate = 0.01
-        self.batch_size = 0
+        self.batch_size = 64
         self.device = torch.device(device_name)
 
         self.use_base_line = False
@@ -51,7 +51,7 @@ class CriticConfig:
         self.use_gae = False
         self.gae_lambda = 0.95
 
-        self.max_episode_length = 2000
+        self.max_episode_length = 2048
         self.n_steps = 0 # 0 means MC 
 
         # reward standardization
@@ -73,14 +73,23 @@ class AbstractPGAlgorithm:
     
     def store_transition(self, state, action, reward, next_state, done):
         raise NotImplementedError
+
+    def create_sample_buffer(self):
+        raise NotImplementedError
     
     def should_update(self, done, truncated):
+        raise NotImplementedError
+
+    def should_update_with_buffer(self, done, truncated, sample_buffer):
         raise NotImplementedError
     
     def take_action(self, state):
         raise NotImplementedError
     
     def update(self):
+        raise NotImplementedError
+
+    def update_with_buffer(self, sample_buffer):
         raise NotImplementedError
 
     def save(self, name):
@@ -156,7 +165,7 @@ def evalate_model(env:gym.Env, model:AbstractPGAlgorithm, episodes=20, seed=None
     return np.mean(return_list)
 
 
-def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, eval_episodes, eval_interval, seed=None):
+def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, eval_episodes, eval_interval, seed=None, tensorboard_dir=None):
     time_steps_list = []
     eval_return_list = []
     train_return_list = []
@@ -193,26 +202,27 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
             critic_loss, actor_loss = model.update()
             episode_critic_loss_list.append(critic_loss)
             episode_actor_loss_list.append(actor_loss)
-            write_to_tensorboard("loss/critic_loss", critic_loss, i)
-            write_to_tensorboard("loss/actor_loss", actor_loss, i)
+            write_to_tensorboard("train/policy_gradient_loss", actor_loss, i)
+            write_to_tensorboard("train/value_loss", critic_loss, i)
 
         if done or truncated:
             state = env.reset(seed=seed)[0]
-            write_to_tensorboard("episode/return", eposode_train_return, i)
-            write_to_tensorboard("episode/length", episode_length, i)
+            write_to_tensorboard("rollout/ep_rew_mean", eposode_train_return, i)
+            write_to_tensorboard("rollout/ep_len_mean", episode_length, i)
             eposode_train_return_list.append(eposode_train_return)
             eposode_train_return = 0
             episode_length = 0
             episode += 1
-            if not eval_env:
-                print(f"episode:{episode},timestep:{i}/{time_steps},train:{eposode_train_return_list[-1]:.1f}, critic_loss:{episode_critic_loss_list[-1]:.4f}, actor_loss:{episode_actor_loss_list[-1]:.4f}")
         else:
             state = state_
 
-        if eval_env and i % eval_interval == 0:
+        if i % eval_interval == 0:
             time_steps_list.append(i)
 
-            eval_return = evalate_model(eval_env, model, eval_episodes, seed=seed)
+            eval_return = 0
+            if eval_env:
+                eval_return = evalate_model(eval_env, model, eval_episodes, seed=seed)
+                write_to_tensorboard("eval/return", eval_return, i)
             eval_return_list.append(eval_return)
 
             mean_train_return = np.mean(eposode_train_return_list)
@@ -221,11 +231,147 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
             
             mean_critic_loss = np.mean(episode_critic_loss_list)
             critic_loss_list.append(mean_critic_loss)
-            critic_loss_list = []
+            episode_critic_loss_list = []
             mean_actor_loss = np.mean(episode_actor_loss_list)
             actore_loss_list.append(mean_actor_loss)
             episode_critic_loss_list = []
             print(f"episode:{episode},timestep:{i}/{time_steps},train:{mean_train_return:.1f}, eval:{eval_return:.1f}, critic_loss:{mean_critic_loss:.4f}, actor_loss:{mean_actor_loss:.4f}")
+
+    result = {
+        "eval": eval_return_list,
+        "train": train_return_list,
+        "critic_loss": critic_loss_list,
+        "actor_loss": actore_loss_list,
+        "time_steps": time_steps_list,
+    }
+    return result
+
+class trainEnv:
+    def __init__(self, env, seed=None): 
+        self.env = env
+        self.seed = seed
+
+        self.returns = []
+        self.episode_lengths = []
+        self.actor_losses = []
+        self.critic_losses = []
+
+        self.episode_return = 0
+        self.episode_length = 0
+
+        self.buffer = None
+        self.current_state = None
+
+    def step_update(self, state, action, reward, next_state, done):
+        self.episode_return += reward
+        self.episode_length += 1
+        self.buffer.store_transition(state, action, reward, next_state, done)
+
+    def flush_episode(self, writer, i):
+        if writer:
+            writer.add_scalar("rollout/ep_rew_mean", self.episode_return, i)
+            writer.add_scalar("rollout/ep_len_mean", self.episode_length, i)
+        
+        self.returns.append(self.episode_return)
+        self.episode_lengths.append(self.episode_length)
+        self.episode_return = 0
+        self.episode_length = 0
+
+    def flush_loss(self, writer, i, actor_loss, critic_loss):
+        if writer:
+            writer.add_scalar("train/policy_gradient_loss", actor_loss, i)
+            writer.add_scalar("train/value_loss", critic_loss, i)
+        self.actor_losses.append(actor_loss)
+        self.critic_losses.append(critic_loss)
+
+    def flush_all(self):
+        mean_return = np.mean(self.returns)
+        mean_length = np.mean(self.episode_lengths)
+        mean_actor_loss = np.mean(self.actor_losses)
+        mean_critic_loss = np.mean(self.critic_losses)
+
+        self.returns = []
+        self.episode_lengths = []
+        self.actor_losses = []
+        self.critic_losses = []
+
+        return mean_return, mean_length, mean_actor_loss, mean_critic_loss
+
+    def reset_env(self):
+        return self.env.reset(seed=self.seed)[0]
+
+    @classmethod
+    def flush_envs(cls, envs):
+        returns = []
+        lengths = []
+        actor_losses = []
+        critic_losses = []
+        for env in envs:
+            mean_return, mean_length, mean_actor_loss, mean_critic_loss = env.flush_all()
+            returns.append(mean_return)
+            lengths.append(mean_length)
+            actor_losses.append(mean_actor_loss)
+            critic_losses.append(mean_critic_loss)
+        return np.mean(returns), np.mean(lengths), np.mean(actor_losses), np.mean(critic_losses)
+
+def train_model_with_vectors(envs:[gym.Env], model:AbstractPGAlgorithm, time_steps, eval_env, eval_episodes, eval_interval, seed=None, tensorboard_dir=None):
+    time_steps_list = []
+    eval_return_list = []
+    train_return_list = []
+    critic_loss_list = []
+    actore_loss_list = []
+
+    writer = None
+    if tensorboard_dir:
+        now = time.strftime("%m%d_%H_%M_%S", time.localtime(time.time()))
+        dir_path = f"./logs/{tensorboard_dir}_{now}"
+        writer = SummaryWriter(dir_path)
+
+    num_envs = len(envs)
+    train_envs = []
+    for env in envs:
+        train_env = trainEnv(env, seed) 
+        train_env.buffer = model.create_sample_buffer()
+        train_envs.append(train_env)
+        
+    episode = 0
+    for i in range(0, time_steps//num_envs):
+        step = i*num_envs
+        for train_env in train_envs:
+            if i == 0:
+                train_env.current_state = train_env.reset_env()
+            action = model.take_action(train_env.current_state)
+            if isinstance(env.action_space, gym.spaces.Discrete):
+                action = action[0]
+            state_, reward, done, truncated, _ = train_env.env.step(action)
+            train_env.step_update(train_env.current_state, action, reward, state_, done)
+            if model.should_update_with_buffer(done, truncated, train_env.buffer):
+                critic_loss, actor_loss = model.update_with_buffer(train_env.buffer)
+                train_env.flush_loss(writer, step, actor_loss, critic_loss)
+
+            if done or truncated:
+                train_env.current_state = train_env.reset_env()
+                train_env.flush_episode(writer, step)
+                episode += 1
+            else:
+                train_env.current_state = state_
+
+        if step % eval_interval == 0:
+            time_steps_list.append(i)
+
+            eval_return = 0
+            if eval_env:
+                eval_return = evalate_model(eval_env, model, eval_episodes, seed)
+                if writer:
+                    writer.add_scalar("eval/return", eval_return, step)
+            eval_return_list.append(eval_return)
+
+            mean_train_return, mean_length, mean_actor_loss, mean_critic_loss = trainEnv.flush_envs(train_envs)
+            train_return_list.append(mean_train_return)
+            critic_loss_list.append(mean_critic_loss)
+            actore_loss_list.append(mean_actor_loss)
+
+            print(f"episode:{episode},timestep:{step}/{time_steps},train:{mean_train_return:.1f}, eval:{eval_return:.1f}, critic_loss:{mean_critic_loss:.4f}, actor_loss:{mean_actor_loss:.4f}")
 
     result = {
         "eval": eval_return_list,

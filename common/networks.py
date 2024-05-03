@@ -84,6 +84,18 @@ class DiscretePolicyNetwork(torch.nn.Module):
                 self.fcs.append(torch.nn.Linear(layers_dim[i-1], dim))
         self.fc_A = torch.nn.Linear(layers_dim[-1], output_size) 
 
+        # self.apply(self._init_weights)
+
+    def _init_weights(self, module):
+        if isinstance(module, torch.nn.Linear):
+            torch.nn.init.xavier_normal_(module.weight)
+            module.bias.data.fill_(0)
+            
+            # module.weight.data.normal_(mean=0.0, std=1.0)
+            # if module.bias is not None:
+            #     module.bias.data.zero_()
+
+
     def forward(self, x): 
         for fc in self.fcs:
             x = F.relu(fc(x)) 

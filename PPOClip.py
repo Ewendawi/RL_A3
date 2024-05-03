@@ -58,7 +58,7 @@ class PPOCritic(NormalCritic):
                     gae = GAE_estimate(rewards, self.value_net(states), dones, self.config.gamma, self.config.gae_lambda)
                     gae = gae.view(-1,1).detach()
 
-                # gae = (gae - gae.mean()) / (gae.std() + 1e-8)
+                gae = (gae - gae.mean()) / (gae.std() + 1e-8)
 
                 ratio = torch.exp(log_probs - base_log_probs)
                 clipped_ratio_loss = torch.clamp(ratio, 1 - clip, 1 + clip) * gae
@@ -114,15 +114,24 @@ class PPOClip(AbstractPGAlgorithm):
     def store_transition(self, state, action, reward, next_state, done):
         self.sample_buffer.store_transition(state, action, reward, next_state, done)
 
+    def create_sample_buffer(self):
+        return SampleBuffer()
+
     def should_update(self, done, truncated):
-        if done or truncated:
-            return True
-        if self.sample_buffer.size() >= self.critic.config.max_episode_length:
+        return self.should_update_with_buffer(done, truncated, self.sample_buffer)
+
+    def should_update_with_buffer(self, done, truncated, sample_buffer):
+        # if done or truncated:
+        #     return True
+        if sample_buffer.size() >= self.critic.config.max_episode_length:
             return True
         return False
 
     def update(self):
-        samples = self.sample_buffer.get_all_samples()
+        return self.update_with_buffer(self.sample_buffer)
+
+    def update_with_buffer(self, sample_buffer):
+        samples = sample_buffer.get_all_samples()
         states, actions, rewards, states_, dones = samples
         states = torch.tensor(states, dtype=torch.float32).to(self.actor.config.device)
         actions = torch.tensor(actions).to(self.actor.config.device)
@@ -139,12 +148,12 @@ class PPOClip(AbstractPGAlgorithm):
         samples = (states, actions, rewards, states_, dones)
         critic_loss, actor_loss = self.critic.updateWithActor(samples, self.actor)
 
-        self.sample_buffer.reset()
+        sample_buffer.reset()
         return critic_loss, actor_loss
 
 
 def exp_config_for_PPOClip(exp_name="ppo", env_name="", repeat=1, timesteps=20000, device_name="cpu"):
-    seed = 123
+    seed = 12356
 
     env = gym.make(env_name)
     continuous_action = isinstance(env.action_space, gym.spaces.Box)
@@ -170,7 +179,7 @@ def exp_config_for_PPOClip(exp_name="ppo", env_name="", repeat=1, timesteps=2000
 
     eval_interval = 3000
     eval_env = gym.make(env_name)
-    eval_episodes = 10
+    eval_episodes = 5
 
     exp_config = ExpConfig(exp_name, repeat, env, timesteps, eval_interval, eval_env, eval_episodes)
     exp_config.actor_config = actor_config

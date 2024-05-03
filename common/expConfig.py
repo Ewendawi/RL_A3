@@ -26,6 +26,7 @@ class ExpConfig:
         self.actor_config: ActorConfig 
         self.critic_config: CriticConfig 
 
+        self.dir_name = None
         self.tensorboard_dir = None
 
     def update_dir_name(self, suffix:str=""):
@@ -60,12 +61,15 @@ if mp.get_context().get_start_method() == 'fork':
     mp.set_start_method("spawn")
 
 def task(model, exp_config) -> None:
-    dir_name = exp_config.dir_name
     repeat = exp_config.repeat
-    # make dir results
-    dir_path = f"./results/{dir_name}"
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path, exist_ok=True)
+
+    dir_name = exp_config.dir_name
+    dir_path = None
+    if dir_name :
+        # make dir results
+        dir_path = f"./results/{dir_name}"
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path, exist_ok=True)
 
     for i in range(repeat):
         print(f"Running {i+1} of {repeat}")
@@ -76,10 +80,11 @@ def task(model, exp_config) -> None:
                               seed=exp_config.seed, tensorboard_dir=exp_config.tensorboard_dir)
         print(f"Time taken: {time.time() - start:.2f}s")
 
-        for key, value in results.items():
-            file_path = f"{dir_path}/{i}-{key}.npy"  
-            np.save(file_path, value)
-            print(f"saved {file_path}")
+        if dir_path:
+            for key, value in results.items():
+                file_path = f"{dir_path}/{i}-{key}.npy"  
+                np.save(file_path, value)
+                print(f"saved {file_path}")
 
 def run_experiment(model, exp_config, multi_process=False):
     if multi_process:

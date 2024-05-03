@@ -170,6 +170,7 @@ class NormalCritic(AbstractCritic):
             state_values = torch.cat(state_values, dim=0)
         else:
             state_values = torch.zeros_like(returns)
+            total_loss.append(0)
 
         psi_values = self.calculate_psi_value(returns, rewards, state_values, dones)
 

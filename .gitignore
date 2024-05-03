@@ -5,3 +5,5 @@ experiments/*
 images/*
 models/*
 test*.py
+logs/*
+!logs/*-sync
