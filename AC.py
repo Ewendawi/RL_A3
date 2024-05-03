@@ -174,7 +174,7 @@ class NormalCritic(AbstractCritic):
 
         psi_values = self.calculate_psi_value(returns, rewards, state_values, dones)
 
-        return np.mean(total_loss), psi_values 
+        return np.mean(total_loss), psi_values
 
 class OnPolicyPGAlgorithm(AbstractPGAlgorithm):
     def __init__(self, actor_config: ActorConfig, critic_config: CriticConfig):
@@ -219,7 +219,8 @@ class OnPolicyPGAlgorithm(AbstractPGAlgorithm):
         actor_loss = self.actor.update(samples, psi_values)
 
         self.sample_buffer.reset()
-        return critic_loss, actor_loss
+        log_infos = {}
+        return critic_loss, actor_loss, log_infos
 
 def exp_config_for_AC(exp_name="AC", env_name="", repeat=1, timesteps=20000, device_name="cpu"):
     seed = 123

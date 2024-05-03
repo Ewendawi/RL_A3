@@ -189,25 +189,26 @@ def experiment_PPO():
     actor_lr = 1e-3
     critic_lr = 3e-2
 
-    env_name = "Pendulum-v1"
-    time_steps = 200000
-    sample_size = 256
-    standardize_reward = True
-    reward_uppper_bound = 0.0
-    reward_low_bound = -16.0
-    actor_lr = 1e-4
-    critic_lr = 1e-3
+    # env_name = "Pendulum-v1"
+    # time_steps = 200000
+    # sample_size = 256
+    # standardize_reward = True
+    # reward_uppper_bound = 0.0
+    # reward_low_bound = -16.0
+    # actor_lr = 1e-4
+    # critic_lr = 1e-3
 
     # env_name = "Ant-v4"
     # time_steps = 200000
     # actor_lr = 1e-4
     # critic_lr = 1e-3
 
-    # env_name = "LunarLander-v2"
-    # batch_size = 64
-    # actor_lr = 3e-4
-    # critic_lr = 2e-5
-    # sample_size = 2048 
+    env_name = "LunarLander-v2"
+    time_steps = 1000000
+    batch_size = 64
+    actor_lr = 1e-4
+    critic_lr = 3e-5
+    sample_size = 2048 
 
     exp_name = f"PPO-{env_name}-r{repeat}-t{time_steps}"
 
@@ -249,7 +250,7 @@ def experiment_PPO():
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    experiment = 0
+    experiment = 3
     try:
         opts, args = getopt.getopt(argv,"he:", ["disable_multi_process", "device="])
     except getopt.GetoptError:

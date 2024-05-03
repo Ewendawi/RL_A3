@@ -2,7 +2,30 @@
 import torch
 import torch.nn.functional as F
 
+def xavier_init_weights(network, uniform=False, bias_const=0.0):
+    for m in network.modules():
+        if isinstance(m, torch.nn.Linear):
+            if uniform:
+                torch.nn.init.xavier_uniform_(m.weight)
+            else:
+                torch.nn.init.xavier_normal_(m.weight)
+            m.bias.data.fill_(bias_const)
 
+def kaiming_init_weights(network, uniform=False, bias_const=0.0):
+    for m in network.modules():
+        if isinstance(m, torch.nn.Linear):
+            if uniform:
+                torch.nn.init.kaiming_uniform_(m.weight)
+            else:
+                torch.nn.init.kaiming_normal_(m.weight)
+            m.bias.data.fill_(bias_const)
+
+def orthogonal_init_weights(network, std=1.2, bias_const=0.0):
+    for m in network.modules():
+        if isinstance(m, torch.nn.Linear):
+            torch.nn.init.orthogonal_(m.weight, std)
+            m.bias.data.fill_(bias_const)
+    
 # outpput action value
 # use tanh to bound the output in [-1, 1] and scale it to the output_bound
 class DeterministicContinuousPolicyNetwork(torch.nn.Module):
@@ -84,17 +107,12 @@ class DiscretePolicyNetwork(torch.nn.Module):
                 self.fcs.append(torch.nn.Linear(layers_dim[i-1], dim))
         self.fc_A = torch.nn.Linear(layers_dim[-1], output_size) 
 
-        # self.apply(self._init_weights)
+        self.apply(self.__init_weights)
 
-    def _init_weights(self, module):
+    def __init_weights(self, module):
         if isinstance(module, torch.nn.Linear):
             torch.nn.init.xavier_normal_(module.weight)
             module.bias.data.fill_(0)
-            
-            # module.weight.data.normal_(mean=0.0, std=1.0)
-            # if module.bias is not None:
-            #     module.bias.data.zero_()
-
 
     def forward(self, x): 
         for fc in self.fcs:
@@ -115,6 +133,13 @@ class ValueNetwork(torch.nn.Module):
                 self.fcs.append(torch.nn.Linear(layers_dim[i-1], dim))
         self.fc_V = torch.nn.Linear(layers_dim[-1], 1)
 
+        self.apply(self.__init_weights)
+
+    def __init_weights(self, module):
+        if isinstance(module, torch.nn.Linear):
+            torch.nn.init.xavier_normal_(module.weight)
+            module.bias.data.fill_(0)
+        
     def forward(self, x): 
         for fc in self.fcs:
             x = F.relu(fc(x)) 

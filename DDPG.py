@@ -122,7 +122,8 @@ class DDPG(AbstractPGAlgorithm):
         self.actor.optimizer.step()
         self.actor.update(samples, psi_values)
 
-        return critic_loss.detach().item(), actor_loss.detach().item()
+        log_infos = {}
+        return critic_loss.detach().item(), actor_loss.detach().item(), log_infos
 
         
 def exp_config_for_DDPG(exp_name="DDPG", env_name="", repeat=1, timesteps=20000, device_name="cpu"):

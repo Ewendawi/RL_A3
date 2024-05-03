@@ -85,3 +85,4 @@ the output of images will be in the "images" directory
     - [A Closer Look at Deep Policy Gradients](https://arxiv.org/abs/1811.02553)
 - Generalized Advantage Estimation:[1](https://arxiv.org/abs/1506.02438), [2](https://towardsdatascience.com/generalized-advantage-estimation-in-reinforcement-learning-bf4a957f7975)
 - [Regularization in Reinforcement Learning](https://rl-vs.github.io/rlvs2021/class-material/regularized_mdp/Regularization_RL_RLVS.pdf#page=1.00)
+- [How to Initialize Weights in PyTorch](https://wandb.ai/wandb_fc/tips/reports/How-to-Initialize-Weights-in-PyTorch--VmlldzoxNjcwOTg1)

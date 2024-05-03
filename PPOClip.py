@@ -13,7 +13,10 @@ class PPOClipConfig(CriticConfig):
         super(PPOClipConfig, self).__init__(device_name)
         self.clip = 0.2
         self.dual_clip = 5.0
+        self.target_kl = None
         self.recompute_gae = False
+        self.use_total_loss = True
+        self.value_loss_weight = 0.5
         self.repeat = 10
 
 class PPOCritic(NormalCritic):
@@ -37,7 +40,12 @@ class PPOCritic(NormalCritic):
         
         actor_loss_list = []
         value_loss_list = []
+        log_infos = {
+            "clip_fraction": [],
+            "approx_kl": []
+        }
         batch_indeices = np.arange(g_states.shape[0])
+        stop_training = False
         for _ in range(self.config.repeat):
             np.random.shuffle(batch_indeices)
             batch_size = self.config.batch_size
@@ -61,6 +69,8 @@ class PPOCritic(NormalCritic):
                 gae = (gae - gae.mean()) / (gae.std() + 1e-8)
 
                 ratio = torch.exp(log_probs - base_log_probs)
+                clip_fraction = torch.mean((torch.abs(ratio - 1) > clip).float()).item()
+                log_infos["clip_fraction"].append(clip_fraction)
                 clipped_ratio_loss = torch.clamp(ratio, 1 - clip, 1 + clip) * gae
                 ratio_loss = ratio * gae
                 if self.config.dual_clip >= 1:
@@ -70,16 +80,23 @@ class PPOCritic(NormalCritic):
                 else:
                     actor_loss = -torch.min(clipped_ratio_loss, ratio_loss).mean()
 
+                with torch.no_grad():
+                    log_ratio = log_probs - base_log_probs
+                    approx_kl_div = torch.mean((torch.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                    log_infos["approx_kl"].append(approx_kl_div)
+
+                if self.config.target_kl in not None and approx_kl_div > self.config.target_kl:
+                    stop_training = True
+                    break
+
                 actor_loss = actor_loss - actor.config.entropy_weight * dists.entropy().mean()
                 state_values = self.value_net(states)
                 value_loss = torch.nn.functional.mse_loss(state_values, returns) 
 
-                use_total_loss = False
-
                 actor.optimizer.zero_grad()
                 self.value_net_optimizer.zero_grad()
-                if use_total_loss:
-                    loss = actor_loss + 0.5 * value_loss
+                if self.config.use_total_loss:
+                    loss = actor_loss + value_loss * self.config.value_loss_weight
                     loss.backward()
                 else:
                     actor_loss.backward()
@@ -91,8 +108,12 @@ class PPOCritic(NormalCritic):
 
                 actor_loss_list.append(actor_loss.detach().cpu())
                 value_loss_list.append(value_loss.detach().cpu())
+            if stop_training:
+                break
 
-        return np.mean(value_loss_list), np.mean(actor_loss_list)
+        for k in log_infos.keys():
+            log_infos[k] = np.mean(log_infos[k])
+        return np.mean(value_loss_list), np.mean(actor_loss_list), log_infos
 
 # tricks
 # - dual clip
@@ -146,10 +167,10 @@ class PPOClip(AbstractPGAlgorithm):
             rewards = (rewards + mean_reward) / mean_reward
 
         samples = (states, actions, rewards, states_, dones)
-        critic_loss, actor_loss = self.critic.updateWithActor(samples, self.actor)
+        critic_loss, actor_loss, log_infos = self.critic.updateWithActor(samples, self.actor)
 
         sample_buffer.reset()
-        return critic_loss, actor_loss
+        return critic_loss, actor_loss, log_infos
 
 
 def exp_config_for_PPOClip(exp_name="ppo", env_name="", repeat=1, timesteps=20000, device_name="cpu"):

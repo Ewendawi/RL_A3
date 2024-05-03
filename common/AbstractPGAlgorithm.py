@@ -199,11 +199,13 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
 
         model.store_transition(state, action, reward, state_, done)
         if model.should_update(done, truncated):
-            critic_loss, actor_loss = model.update()
+            critic_loss, actor_loss, log_infos = model.update()
             episode_critic_loss_list.append(critic_loss)
             episode_actor_loss_list.append(actor_loss)
             write_to_tensorboard("train/policy_gradient_loss", actor_loss, i)
             write_to_tensorboard("train/value_loss", critic_loss, i)
+            for key, value in log_infos.items():
+                write_to_tensorboard(f"train/{key}", value, i)
 
         if done or truncated:
             state = env.reset(seed=seed)[0]
@@ -330,7 +332,7 @@ def train_model_with_vectors(envs:[gym.Env], model:AbstractPGAlgorithm, time_ste
     num_envs = len(envs)
     train_envs = []
     for env in envs:
-        train_env = trainEnv(env, seed) 
+        train_env = trainEnv(env, seed+1) 
         train_env.buffer = model.create_sample_buffer()
         train_envs.append(train_env)
         
@@ -346,9 +348,12 @@ def train_model_with_vectors(envs:[gym.Env], model:AbstractPGAlgorithm, time_ste
             state_, reward, done, truncated, _ = train_env.env.step(action)
             train_env.step_update(train_env.current_state, action, reward, state_, done)
             if model.should_update_with_buffer(done, truncated, train_env.buffer):
-                critic_loss, actor_loss = model.update_with_buffer(train_env.buffer)
+                critic_loss, actor_loss, log_infos = model.update_with_buffer(train_env.buffer)
                 train_env.flush_loss(writer, step, actor_loss, critic_loss)
-
+                for key, value in log_infos.items():
+                    if writer:
+                        writer.add_scalar(f"train/{key}", value, step)
+                
             if done or truncated:
                 train_env.current_state = train_env.reset_env()
                 train_env.flush_episode(writer, step)
