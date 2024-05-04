@@ -388,7 +388,7 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
     dirs = []
     run_multi_process = multi_process 
     repeat = 5
-    time_steps = 600
+    time_steps = 1000000
     n_step=16
     env_name = "LunarLander-v2"
     exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
