@@ -81,12 +81,16 @@ if __name__ == "__main__":
         path = "./models/AC_Pendulum-v1_True_r1_t200000_0412_23_45_31"
         render_env(path)
     elif experiment == 101:
-        plot_with_file("./experiments/reinforce-LunarLander-v2-lr-r10-t1000000-0504_02_35_41.npy")
+        path = "experiments/reinforce-LunarLander-v2-bl-r4-t400000-0504_14_44_52.npy"
+        names = ["train", "eval"]
+        names = []
+        plot_with_file(path, names=names)
     elif experiment == 102:
         # clear the results you don't need.
         # before running this, it is better to commit or stage the results you want to keep by git
         # make sure you have the correct file name.
-        clear_files("DQN_rb_tn-r1-t20000-bs128-0330_15_38_33.npy")
+        file_path = "experiments/reinforce-LunarLander-v2-lr-r10-t100000-0504_11_39_06.npy"
+        clear_files(file_path)
 
     
     elif experiment == 29:
