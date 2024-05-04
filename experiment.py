@@ -32,7 +32,6 @@ if __name__ == "__main__":
         elif opt in ("--device"):
             DEVICE_NAME = arg
 
-    experiment = 13
     if experiment == 0:
         pass
     # reinforce
@@ -88,4 +87,26 @@ if __name__ == "__main__":
         # before running this, it is better to commit or stage the results you want to keep by git
         # make sure you have the correct file name.
         clear_files("DQN_rb_tn-r1-t20000-bs128-0330_15_38_33.npy")
+
+    
+    elif experiment == 29:
+        print('Running experiment actor-critic entropy_weights')
+        exp_AC.experiment_AC_entropy_weights(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+
+    elif experiment == 1926:
+        print('Running experiment actor-critic critic_lr')
+        exp_AC.experiment_AC_critic_lr(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+
+    elif experiment == 1979:
+        print('Running experiment actor-critic actor_lr')
+        exp_AC.experiment_AC_actor_lr(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+
+    elif experiment == 2000:
+        print('Running experiment actor-critic nstep')
+        exp_AC.experiment_AC_nstep(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+
+    elif experiment == 2024:
+        print('Running experiment actor-critic base_boot')
+        exp_AC.experiment_AC_base_boot(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME )
+
 
