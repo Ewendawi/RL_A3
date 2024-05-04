@@ -7,3 +7,7 @@ models/*
 test*.py
 logs/*
 !logs/*-sync
+
+!images/*-r10-t1000000*.png
+!experiments/*-r10-t1000000*.npy
+!results/*-r10-t1000000*
