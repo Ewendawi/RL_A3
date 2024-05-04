@@ -247,7 +247,7 @@ def experiment_AC_entropy_weights():
     #YES baseline substraction
     
     dirs = []
-    repeat = 3
+    repeat = 5
     run_multi_process = USE_MULTI_PROCESS and False
     time_steps = 1000000  
     n_step=16
@@ -281,7 +281,7 @@ def experiment_AC_critic_lr():
     #YES baseline substraction
     
     dirs = []
-    repeat = 3
+    repeat = 5
     run_multi_process = USE_MULTI_PROCESS and False
     time_steps = 1000000  
     n_step=16
@@ -318,7 +318,7 @@ def experiment_AC_actor_lr():
     #YES baseline substraction
     
     dirs = []
-    repeat = 3
+    repeat = 5
     run_multi_process = USE_MULTI_PROCESS and False
     time_steps = 1000000  
     n_step=16
@@ -354,7 +354,7 @@ def experiment_AC_nstep():
     #YES baseline substraction
     
     dirs = []
-    repeat = 3
+    repeat = 5
     run_multi_process = USE_MULTI_PROCESS and False
     time_steps = 1000000  
     n_step=16
@@ -390,7 +390,7 @@ def experiment_AC_base_boot():
     #experiment with/without bootstrapping and baseline
     
     dirs = []
-    repeat = 3
+    repeat = 5
     run_multi_process = USE_MULTI_PROCESS and False
     time_steps = 1000000  
     n_step=16
