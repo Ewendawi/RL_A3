@@ -405,7 +405,6 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
         exp_config.critic_config.n_steps = int(flugs[i][1]*n_step)
 
         # exp_config.tensorboard_dir = f"{exp_name}base_boot_{flugs[i]}"
-        print('au',flugs[i])
         exp_config.update_dir_name(suffix=f"base_boot_{flugs2[i]}")
         run_experiment(exp_config=exp_config, multi_process=run_multi_process)
         dirs.append(exp_config.dir_name)
