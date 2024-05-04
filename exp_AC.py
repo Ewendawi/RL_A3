@@ -242,3 +242,184 @@ def experiment_entropy(multi_process=False, device_name="cpu"):
     names = [f"{exp_name}_train", f"{exp_name}_eval"]
     plot_with_file(file, names=names)
 
+def experiment_AC_entropy_weights():
+    #YES bootstrapping
+    #YES baseline substraction
+    
+    dirs = []
+    repeat = 3
+    run_multi_process = USE_MULTI_PROCESS and False
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    entropy_weights = [0.0001, 0.01, 0.1, 0.5, 1]
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+
+    for entropy_weight in entropy_weights:
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+        exp_config.actor_config.entropy_weight = entropy_weight
+        exp_config.critic_config.use_base_line = True
+        exp_config.critic_config.n_steps = n_step
+        exp_config.tensorboard_dir = f"{exp_name}_entropy_weight_{entropy_weight}"
+        exp_config.update_dir_name(suffix=f"entropy_weight_{entropy_weight}")
+        model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
+        run_experiment(model, exp_config=exp_config, multi_process=False)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["entropy_weight_" + str(weight) for weight in entropy_weights]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+
+def experiment_AC_critic_lr():
+    #YES bootstrapping
+    #YES baseline substraction
+    
+    dirs = []
+    repeat = 3
+    run_multi_process = USE_MULTI_PROCESS and False
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    learning_rates = [0.001, 0.01, 0.1]
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+    entropy_weight = 0.001
+
+    for learning_rate in learning_rates:
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+        exp_config.critic_config.learning_rate = learning_rate
+        exp_config.actor_config.entropy_weight = entropy_weight
+        exp_config.critic_config.use_base_line = True
+        exp_config.critic_config.n_steps = n_step
+        exp_config.tensorboard_dir = f"{exp_name}_learning_rate_c{learning_rate}"
+        exp_config.update_dir_name(suffix=f"learning_rate_c{learning_rate}")
+        model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
+        run_experiment(model, exp_config=exp_config, multi_process=False)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["learning_rate_c" + str(learning_rate) for learning_rate in learning_rates]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+    
+#added:
+def experiment_AC_actor_lr():
+    #YES bootstrapping
+    #YES baseline substraction
+    
+    dirs = []
+    repeat = 3
+    run_multi_process = USE_MULTI_PROCESS and False
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    learning_rates = [0.001, 0.01, 0.1]
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+    entropy_weight = 0.001
+
+    for learning_rate in learning_rates:
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+        exp_config.actor_config.learning_rate = learning_rate
+        exp_config.actor_config.entropy_weight = entropy_weight
+        exp_config.critic_config.use_base_line = True
+        exp_config.critic_config.n_steps = n_step
+        exp_config.tensorboard_dir = f"{exp_name}_learning_rate_a{learning_rate}"
+        exp_config.update_dir_name(suffix=f"learning_rate_a{learning_rate}")
+        model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
+        run_experiment(model, exp_config=exp_config, multi_process=False)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["learning_rate_a" + str(learning_rate) for learning_rate in learning_rates]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+
+def experiment_AC_nstep():
+    #YES bootstrapping
+    #YES baseline substraction
+    
+    dirs = []
+    repeat = 3
+    run_multi_process = USE_MULTI_PROCESS and False
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    nsteps = [5, 10, 16, 50, 100]
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+    entropy_weight = 0.001
+
+    for nstep in nsteps:
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+        exp_config.actor_config.nstep = nstep
+        exp_config.actor_config.entropy_weight = entropy_weight
+        exp_config.critic_config.use_base_line = True
+        exp_config.critic_config.n_steps = n_step
+        exp_config.tensorboard_dir = f"{exp_name}_nstep_{nstep}"
+        exp_config.update_dir_name(suffix=f"nstep_{nstep}")
+        model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
+        run_experiment(model, exp_config=exp_config, multi_process=False)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["nstep" + str(nstep) for nstep in nsteps]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+
+
+def experiment_AC_base_boot():
+    #experiment with/without bootstrapping and baseline
+    
+    dirs = []
+    repeat = 3
+    run_multi_process = USE_MULTI_PROCESS and False
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+    entropy_weight = 0.001
+
+    flugs = [[True,True],[False,False],[True,False],[False,True]]
+
+    for i in range(4):
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
+        exp_config.actor_config.entropy_weight = entropy_weight
+
+        exp_config.critic_config.use_base_line = flugs[i][0]
+        exp_config.critic_config.n_steps = int(flugs[i][1]*n_step)
+
+        exp_config.tensorboard_dir = f"{exp_name}base_boot_{flugs[i]}"
+        exp_config.update_dir_name(suffix=f"base_boot_{flugs[i]}")
+        model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
+        run_experiment(model, exp_config=exp_config, multi_process=False)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["base_boot" + str(flug) for flug in flugs]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+
