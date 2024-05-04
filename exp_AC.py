@@ -388,13 +388,14 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
     dirs = []
     run_multi_process = multi_process 
     repeat = 5
-    time_steps = 1000000  
+    time_steps = 600
     n_step=16
     env_name = "LunarLander-v2"
     exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
     entropy_weight = 0.001
 
     flugs = [[True,True],[False,False],[True,False],[False,True]]
+    flugs2 = ['True,True','False,False','True,False','False,True']
 
     for i in range(4):
         exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=device_name)
@@ -404,7 +405,8 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
         exp_config.critic_config.n_steps = int(flugs[i][1]*n_step)
 
         # exp_config.tensorboard_dir = f"{exp_name}base_boot_{flugs[i]}"
-        exp_config.update_dir_name(suffix=f"base_boot_{flugs[i]}")
+        print('au',flugs[i])
+        exp_config.update_dir_name(suffix=f"base_boot_{flugs2[i]}")
         run_experiment(exp_config=exp_config, multi_process=run_multi_process)
         dirs.append(exp_config.dir_name)
 
@@ -412,7 +414,8 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
         join_processes()
         clean_processes()
 
-    exp_labels = ["base_boot" + str(flug) for flug in flugs]
+   
+    exp_labels = ["base_boot" + str(flug) for flug in flugs2]
     file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
 
     names = [f"{exp_name}_train", f"{exp_name}_eval"]
