@@ -20,7 +20,7 @@ class StochasticActor(AbstractActor):
         self.optimizer = torch.optim.Adam(self.policy_net.parameters(), lr=config.learning_rate)
 
     def save(self, name):
-        save_model(self.policy_net, name)
+        return save_model(self.policy_net, name)
 
     def action_distribution(self, state):
         if self.config.continuous_action_space:
@@ -186,7 +186,7 @@ class OnPolicyPGAlgorithm(AbstractPGAlgorithm):
         self.sample_buffer = SampleBuffer()
 
     def save(self, name):
-        self.actor.save(name)
+        return self.actor.save(name)
 
     def store_transition(self, state, action, reward, next_state, done, ):
         self.sample_buffer.store_transition(state, action, reward, next_state, done)
@@ -243,7 +243,7 @@ def exp_config_for_AC(exp_name="AC", env_name="", repeat=1, timesteps=20000, dev
     critic_config.input_size = env.observation_space.shape[0]
     critic_config.n_steps = 1
 
-    eval_interval = 3000
+    eval_interval = 2000
     eval_env = gym.make(env_name)
     eval_episodes = 10
 
@@ -251,6 +251,7 @@ def exp_config_for_AC(exp_name="AC", env_name="", repeat=1, timesteps=20000, dev
     exp_config.actor_config = actor_config
     exp_config.critic_config = critic_config
     exp_config.seed = seed
+    exp_config.model_cls = ActorCritic
     return exp_config
 
 class ActorCritic(OnPolicyPGAlgorithm):
@@ -281,7 +282,7 @@ def exp_config_for_reinforce(exp_name="REINFORCE", env_name="", repeat=1, timest
     critic_config.input_size = env.observation_space.shape[0]
     critic_config.n_steps = 0
 
-    eval_interval = 5000
+    eval_interval = 2000
     eval_env = gym.make(env_name)
     eval_episodes = 10
 
@@ -289,6 +290,7 @@ def exp_config_for_reinforce(exp_name="REINFORCE", env_name="", repeat=1, timest
     exp_config.actor_config = actor_config
     exp_config.critic_config = critic_config
     exp_config.seed = seed
+    exp_config.model_cls = REINFORCE
     return exp_config
 
 class REINFORCE(OnPolicyPGAlgorithm):

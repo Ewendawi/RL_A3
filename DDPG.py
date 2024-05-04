@@ -150,4 +150,5 @@ def exp_config_for_DDPG(exp_name="DDPG", env_name="", repeat=1, timesteps=20000,
     exp_config.actor_config = actor_config
     exp_config.critic_config = critic_config
     exp_config.seed = seed
+    exp_config.model_cls = DDPG
     return exp_config

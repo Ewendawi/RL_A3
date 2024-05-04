@@ -85,7 +85,7 @@ class PPOCritic(NormalCritic):
                     approx_kl_div = torch.mean((torch.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
                     log_infos["approx_kl"].append(approx_kl_div)
 
-                if self.config.target_kl in not None and approx_kl_div > self.config.target_kl:
+                if self.config.target_kl is not None and approx_kl_div > self.config.target_kl:
                     stop_training = True
                     break
 
@@ -206,4 +206,5 @@ def exp_config_for_PPOClip(exp_name="ppo", env_name="", repeat=1, timesteps=2000
     exp_config.actor_config = actor_config
     exp_config.critic_config = critic_config
     exp_config.seed = seed
+    exp_config.model_cls = PPOClip
     return exp_config

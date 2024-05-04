@@ -102,6 +102,7 @@ def save_model(model, name):
     now = time.strftime("%m%d_%H_%M_%S", time.localtime(time.time()))
     path = f"{plots_dir}/{name}-{now}"
     torch.save(model, path)
+    return path
 
 class RenderActor:
     def __init__(self, path, continuous_action):
@@ -109,7 +110,7 @@ class RenderActor:
         self.continuous_action = continuous_action
 
     def take_action(self, state):
-        state = torch.tensor(state, dtype=torch.float32).to("cpu")
+        state = torch.tensor(state, dtype=torch.float32).view(1,-1).to("cpu")
         with torch.no_grad():
             if self.continuous_action:
                 mu, std = self.model(state)
@@ -133,7 +134,7 @@ def render_env(path):
     ob = env.reset()[0]
     r = 0
     while True:
-        action = model.take_action(ob)
+        action = model.take_action(ob)[0]
         ob, reward, done, truncated, info = env.step(action)
         env.render()
         r += reward
@@ -171,6 +172,7 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
     train_return_list = []
     critic_loss_list = []
     actore_loss_list = []
+    approx_kl_div = []
 
     writer = None
     if tensorboard_dir:
@@ -186,15 +188,16 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
     episode = 0
     episode_critic_loss_list = []
     episode_actor_loss_list = []
-    eposode_train_return_list = []
-    eposode_train_return = 0
+    episode_train_return_list = []
+    episode_approx_kl_div_list = []
+    episode_train_return = 0
     episode_length = 0
     for i in range(1, time_steps+1):
         action = model.take_action(state)
         if isinstance(env.action_space, gym.spaces.Discrete):
             action = action[0]
         state_, reward, done, truncated, _ = env.step(action)
-        eposode_train_return += reward
+        episode_train_return += reward
         episode_length += 1
 
         model.store_transition(state, action, reward, state_, done)
@@ -206,19 +209,21 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
             write_to_tensorboard("train/value_loss", critic_loss, i)
             for key, value in log_infos.items():
                 write_to_tensorboard(f"train/{key}", value, i)
+                if key == "approx_kl_div":
+                    episode_approx_kl_div_list.append(value)
 
         if done or truncated:
             state = env.reset(seed=seed)[0]
-            write_to_tensorboard("rollout/ep_rew_mean", eposode_train_return, i)
+            write_to_tensorboard("rollout/ep_rew_mean", episode_train_return, i)
             write_to_tensorboard("rollout/ep_len_mean", episode_length, i)
-            eposode_train_return_list.append(eposode_train_return)
-            eposode_train_return = 0
+            episode_train_return_list.append(episode_train_return)
+            episode_train_return = 0
             episode_length = 0
             episode += 1
         else:
             state = state_
 
-        if i % eval_interval == 0:
+        if i % eval_interval == 0 or i == time_steps:
             time_steps_list.append(i)
 
             eval_return = 0
@@ -227,16 +232,23 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
                 write_to_tensorboard("eval/return", eval_return, i)
             eval_return_list.append(eval_return)
 
-            mean_train_return = np.mean(eposode_train_return_list)
+            mean_train_return = np.mean(episode_train_return_list)
             train_return_list.append(mean_train_return)
-            eposode_train_return_list = []
+            episode_train_return_list = []
+
+            if len(episode_approx_kl_div_list) > 0:
+                mean_approx_kl_div = np.mean(episode_approx_kl_div_list)
+                approx_kl_div.append(mean_approx_kl_div)
+                episode_approx_kl_div_list = []
             
             mean_critic_loss = np.mean(episode_critic_loss_list)
             critic_loss_list.append(mean_critic_loss)
             episode_critic_loss_list = []
+            
             mean_actor_loss = np.mean(episode_actor_loss_list)
             actore_loss_list.append(mean_actor_loss)
             episode_critic_loss_list = []
+
             print(f"episode:{episode},timestep:{i}/{time_steps},train:{mean_train_return:.1f}, eval:{eval_return:.1f}, critic_loss:{mean_critic_loss:.4f}, actor_loss:{mean_actor_loss:.4f}")
 
     result = {
@@ -246,6 +258,8 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
         "actor_loss": actore_loss_list,
         "time_steps": time_steps_list,
     }
+    if len(approx_kl_div) > 0:
+        result["approx_kl_div"] = approx_kl_div
     return result
 
 class trainEnv:

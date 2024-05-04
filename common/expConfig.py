@@ -11,6 +11,7 @@ class ExpConfig:
     def __init__(self, exp_name, repeat, env, timesteps, eval_interval, eval_env, eval_episodes=20):
         self.env = env
         self.timesteps = timesteps
+        self.model_cls = None
 
         self.exp_name = exp_name
         self.dir_name: str 
@@ -60,7 +61,7 @@ export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
 if mp.get_context().get_start_method() == 'fork':
     mp.set_start_method("spawn")
 
-def task(model, exp_config) -> None:
+def task(exp_config) -> None:
     repeat = exp_config.repeat
 
     dir_name = exp_config.dir_name
@@ -73,6 +74,12 @@ def task(model, exp_config) -> None:
 
     for i in range(repeat):
         print(f"Running {i+1} of {repeat}")
+        model_cls = exp_config.model_cls
+        if not model_cls:
+            raise ValueError("Model class is not defined")
+
+        model = model_cls(exp_config.actor_config, exp_config.critic_config)
+
         start = time.time()
         results = train_model(env=exp_config.env, model=model, 
                               time_steps=exp_config.timesteps, 
@@ -86,10 +93,10 @@ def task(model, exp_config) -> None:
                 np.save(file_path, value)
                 print(f"saved {file_path}")
 
-def run_experiment(model, exp_config, multi_process=False):
+def run_experiment(exp_config, multi_process=False):
     if multi_process:
-        p = mp.Process(target=task, args=(model,exp_config,))
+        p = mp.Process(target=task, args=(exp_config,))
         PROCESS_QUEUE.append(p)
         p.start()
     else:
-        task(model, exp_config)
+        task(exp_config)

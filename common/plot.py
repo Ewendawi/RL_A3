@@ -42,7 +42,7 @@ def clear_files_with_re():
 
 
 def get_mean_value_with_filter(
-    filters, keys=["eval", "train", "time_steps", "loss"], smooth_window=0
+    filters, keys=["eval", "train", "time_steps", "loss"], smooth_window=0 
 ):
     data_dir = pathlib.Path("./results")
     dirlist = list(data_dir.glob("*"))
@@ -77,6 +77,10 @@ def get_mean_value_with_filter(
         key_data = {}
         for key_t, value_t in file.items():
             data = np.array(list(value_t.values()))
+            # Fix me: this is a temporary solution to remove the outliers
+            if key_t == "train" or key_t == "eval":
+                data[data > 300] = 300
+                data[data < -300] = -300
             mean_data = np.mean(data, axis=0)
             max_data = np.max(data, axis=0)
             min_data = np.min(data, axis=0)
@@ -106,7 +110,10 @@ def plot_with_data(res_map, exp_labels=None, x_y_labels=None, save_name=None):
                 continue
             mean_data, max_data, min_data, std_data = data
             ax.plot(x, mean_data, label=label_name)
-            ax.fill_between(x, min_data, max_data, alpha=0.2)
+            # ax.fill_between(x, min_data, max_data, alpha=0.2)
+            lower_bound = np.max([mean_data - std_data, min_data], axis=0)
+            upper_bound = np.min([mean_data + std_data, max_data], axis=0)
+            ax.fill_between(x, lower_bound, upper_bound, alpha=0.2)
         label_index += 1
 
     # ax.set_ylim(0, ylim)

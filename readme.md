@@ -23,7 +23,9 @@ the output of images will be in the "images" directory
 ## Folder Structure
 ```
 ├── common
-│   ├── AbstractPGAlgorithm.py (define the abstract class for policy gradient algorithms. you can find what componens are abstracted and the main process of algorithm here)
+│   ├── AbstractPGAlgorithm.py 
+│   │   (define the abstract class for policy gradient algorithms. 
+│   │   you can find what componens are abstracted and the main process of algorithm here)
 │   ├── expConfig.py (experiment configuration)
 │   ├── helper.py (sample buffer)
 │   ├── networks.py (all policy and value networks)
@@ -66,7 +68,7 @@ the output of images will be in the "images" directory
 ## Experiments
 
 ### Note
-- Each experiment should repeat 15 times 
+- Each experiment should repeat 10 times 
 - Results are in dir "results"
 - Plot results using "plot_with_file"
 

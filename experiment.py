@@ -1,256 +1,21 @@
 
 import sys
 import getopt
-from common.expConfig import join_processes, clean_processes, run_experiment
-from common.plot import plot_with_file, write_dirs_to_file, clear_files
-from common.AbstractPGAlgorithm import render_env
-from AC import ActorCritic, exp_config_for_AC, REINFORCE, exp_config_for_reinforce 
-from DDPG import DDPG, exp_config_for_DDPG
-from PPOClip import PPOClip, exp_config_for_PPOClip
 
+from common.plot import plot_with_file, clear_files
+from common.AbstractPGAlgorithm import render_env
+import exp_reinforce
+import exp_AC
+import exp_ppo
 
 USE_MULTI_PROCESS = True
 DEVICE_NAME = "cpu"
 # if torch.backends.mps.is_available():
 #     DEVICE_NAME = "mps"
 
-# experiment for reinforce
-def experiment_reinforce():
-    dirs = []
-    run_multi_process = USE_MULTI_PROCESS and False
-    standardize_reward = False
-    repeat = 1
-    time_steps = 1000000
-    batch_size = 0
-
-    env_name = "CartPole-v1"
-    actor_lr = 1e-3
-    critic_lr = 1e-2
-
-    env_name = "MountainCar-v0"
-    batch_size = 64
-    actor_lr = 1e-3
-    critic_lr = 1e-3
-
-    env_name = "LunarLander-v2"
-    batch_size = 64
-    actor_lr = 1e-3
-    critic_lr = 5e-3
-
-    # env_name = "Pendulum-v1"
-    # standardize_reward = True
-    # reward_uppper_bound = 0.0
-    # reward_low_bound = -16.0
-    # actor_lr = 1e-4
-    # critic_lr = 1e-3
-
-    # env_name = "Ant-v4"
-    # standardize_reward = False
-    # actor_lr = 1e-5
-    # critic_lr = 1e-4 
-
-    exp_name = f"reinforce-{env_name}-r{repeat}-t{time_steps}"
-
-    exp_config = exp_config_for_reinforce(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
-    exp_config.critic_config.use_base_line = False
-    exp_config.critic_config.use_gae = False
-    exp_config.critic_config.batch_size = batch_size
-    exp_config.actor_config.batch_size = batch_size
-    exp_config.actor_config.learning_rate = actor_lr
-    exp_config.critic_config.learning_rate = critic_lr
-    exp_config.critic_config.standardize_reward = standardize_reward
-    if standardize_reward:
-        exp_config.critic_config.reward_uppper_bound = reward_uppper_bound
-        exp_config.critic_config.reward_low_bound = reward_low_bound
-    
-    exp_config.update_dir_name('re')
-    exp_config.tensorboard_dir = f"{exp_name}"
-
-    model = REINFORCE(exp_config.actor_config, exp_config.critic_config)
-    run_experiment(model, exp_config=exp_config, multi_process=run_multi_process)
-    dirs.append(exp_config.dir_name)
-
-    if run_multi_process:
-        join_processes()
-        clean_processes()
-
-    exp_labels = []
-
-    exp_labels = ["re"]
-    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
-
-    names = [f"{exp_name}_train", f"{exp_name}_eval"]
-    plot_with_file(file, names=names)
-    
-def experiment_AC():
-    repeat = 1
-    standardize_reward = False
-    time_steps = 1000000
-    batch_size = 0
-    n_step = 8
-
-    env_name = "CartPole-v1"
-    actor_lr = 1e-3
-    critic_lr = 1e-2
-
-    # env_name = "Pendulum-v1"
-    # standardize_reward = True
-    # reward_uppper_bound = 0.0
-    # reward_low_bound = -16.0
-    # actor_lr = 1e-4
-    # critic_lr = 1e-3
-
-    env_name = "LunarLander-v2"
-    batch_size = 32
-    actor_lr = 1e-3
-    critic_lr = 5e-3 
-    n_step = 16
-
-    # env_name = "Ant-v4"
-    # standardize_reward = False
-    # actor_lr = 1e-4
-    # critic_lr = 1e-3 
-
-    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
-
-    exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
-    exp_config.actor_config.batch_size = batch_size
-    exp_config.actor_config.learning_rate = actor_lr
-
-    exp_config.critic_config.use_base_line = True
-    exp_config.critic_config.use_gae = True
-    exp_config.critic_config.n_steps = n_step
-    exp_config.critic_config.batch_size = batch_size
-    exp_config.critic_config.learning_rate = critic_lr
-    exp_config.critic_config.standardize_reward = standardize_reward
-    if standardize_reward:
-        exp_config.critic_config.reward_uppper_bound = reward_uppper_bound
-        exp_config.critic_config.reward_low_bound = reward_low_bound
-    
-    exp_config.tensorboard_dir = f"{exp_name}"
-
-    model = ActorCritic(exp_config.actor_config, exp_config.critic_config)
-    run_experiment(model, exp_config=exp_config, multi_process=False)
-
-
-def experiment_DDPG():
-    dirs = []
-    run_multi_process = USE_MULTI_PROCESS and False
-    repeat = 1
-    time_steps = 20000
-    batch_size = 64
-
-    # env_name = "MountainCarContinuous-v0"
-    env_name = "Pendulum-v1"
-    env_name = "Ant-v4"
-    exp_name = f"DDPG-r{repeat}-t{time_steps}-bs{batch_size}"
-
-    exp_config = exp_config_for_DDPG(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
-    exp_config.critic_config.batch_size = batch_size
-    exp_config.actor_config.batch_size = batch_size
-    exp_config.update_dir_name("DDPG")
-
-    model = DDPG(exp_config.actor_config, exp_config.critic_config)
-    run_experiment(model, exp_config=exp_config, multi_process=run_multi_process)
-    dirs.append(exp_config.dir_name)
-
-    if run_multi_process:
-        join_processes()
-        clean_processes()
-
-    exp_labels = []
-
-    exp_labels = ["DDPG"]
-    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
-
-    names = [f"{exp_name}_train", f"{exp_name}_eval"]
-    plot_with_file(file, names=names)
-
-def experiment_PPO():
-    dirs = []
-    run_multi_process = USE_MULTI_PROCESS and False
-    repeat = 1
-    batch_size = 64
-    standardize_reward = False
-    sample_size = 2048
-    eval_interval = 3000
-
-    env_name = "CartPole-v1"
-    time_steps = 50000
-    sample_size = 256
-    actor_lr = 1e-3
-    critic_lr = 3e-3
-
-    env_name = "MountainCar-v0"
-    batch_size = 64
-    time_steps = 1000000
-    eval_interval = 5000
-    sample_size = 1000
-    actor_lr = 1e-3
-    critic_lr = 3e-2
-
-    # env_name = "Pendulum-v1"
-    # time_steps = 200000
-    # sample_size = 256
-    # standardize_reward = True
-    # reward_uppper_bound = 0.0
-    # reward_low_bound = -16.0
-    # actor_lr = 1e-4
-    # critic_lr = 1e-3
-
-    # env_name = "Ant-v4"
-    # time_steps = 200000
-    # actor_lr = 1e-4
-    # critic_lr = 1e-3
-
-    env_name = "LunarLander-v2"
-    time_steps = 1000000
-    batch_size = 64
-    actor_lr = 1e-4
-    critic_lr = 3e-5
-    sample_size = 2048 
-
-    exp_name = f"PPO-{env_name}-r{repeat}-t{time_steps}"
-
-    exp_config = exp_config_for_PPOClip(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=DEVICE_NAME)
-    exp_config.actor_config.entropy_weight = 0.00
-    # exp_config.actor_config.layers_dim = [64]
-    # exp_config.critic_config.layers_dim = [64]
-    exp_config.actor_config.batch_size = batch_size
-    exp_config.critic_config.batch_size = batch_size
-    
-    exp_config.eval_interval = eval_interval
-    exp_config.actor_config.learning_rate = actor_lr
-    exp_config.critic_config.learning_rate = critic_lr
-    exp_config.critic_config.max_episode_length = sample_size
-    exp_config.critic_config.standardize_reward = standardize_reward
-    if standardize_reward:
-        exp_config.critic_config.reward_uppper_bound = reward_uppper_bound
-        exp_config.critic_config.reward_low_bound = reward_low_bound
-    exp_config.tensorboard_dir = f"{exp_name}"
-    exp_config.update_dir_name("PPO")
-
-    model = PPOClip(exp_config.actor_config, exp_config.critic_config)
-    run_experiment(model, exp_config=exp_config, multi_process=run_multi_process)
-    dirs.append(exp_config.dir_name)
-    # model.save("ppo_model")
-
-    if run_multi_process:
-        join_processes()
-        clean_processes()
-
-    exp_labels = []
-
-    exp_labels = ["ppo"]
-    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
-
-    names = [f"{exp_name}_train", f"{exp_name}_eval"]
-    plot_with_file(file, names=names)
-
-
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    experiment = 3
+    experiment = 0
     try:
         opts, args = getopt.getopt(argv,"he:", ["disable_multi_process", "device="])
     except getopt.GetoptError:
@@ -267,32 +32,60 @@ if __name__ == "__main__":
         elif opt in ("--device"):
             DEVICE_NAME = arg
 
-    # 0: reinforce
-    # 1: AC
-    # 2: DDPG
-    # 3: PPO
-    # 10: render
-
+    experiment = 13
     if experiment == 0:
-        print("Running experiment reinforce")
-        experiment_reinforce()
-    elif experiment == 1:
-        print("Running experiment AC")
-        experiment_AC()
-    elif experiment == 2:
-        print("Running experiment DDPG")
-        experiment_DDPG()
-    elif experiment == 3:
-        print("Running experiment PPO")
-        experiment_PPO()
+        pass
+    # reinforce
+    # 10: test reinforce
+    # 11: learning rate
+    # 12: batch size
+    # 13: entropy
+    # 14: baseline
     elif experiment == 10:
+        exp_reinforce.experiment_reinforce()
+    elif experiment == 11:
+        exp_reinforce.experiment_learing_rate(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 12:
+        exp_reinforce.experiment_batch_size(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 13:
+        exp_reinforce.experiment_entropy(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 14:
+        exp_reinforce.experiment_baseline(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    # Actor Critic
+    # 20: test AC
+    # 21: baseline
+    # 22: learning rate
+    # 23: entropy
+    # 24: steps
+    elif experiment == 20:
+        exp_AC.experiment_AC()
+    elif experiment == 21:
+        exp_AC.experiment_baseline(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 22:
+        pass
+    elif experiment == 23:
+        exp_AC.experiment_entropy(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 24:
+        exp_AC.experiment_steps(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    # PPO
+    # 30: test PPO
+    # 31: PPO KL
+    elif experiment == 30:
+        exp_ppo.experiment_PPO()
+    elif experiment == 31:
+        exp_ppo.experiment_ppo_kl(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    # utils
+    # 100: render
+    # 101: plot
+    # 102: clear
+    elif experiment == 100:
         path = "./models/AC_Pendulum-v1_True_r1_t200000_0412_23_45_31"
         render_env(path)
-    
-    # plot_with_file("DQN_rb_tn-r15-t20000-bs128-0330_16_36_30.npy")
-
-    # clear the results you don't need.
-    # before running this, it is better to commit or stage the results you want to keep by git
-    # make sure you have the correct file name.
-    # clear_files("DQN_rb_tn-r1-t20000-bs128-0330_15_38_33.npy")
+    elif experiment == 101:
+        plot_with_file("./experiments/reinforce-LunarLander-v2-lr-r10-t1000000-0504_02_35_41.npy")
+    elif experiment == 102:
+        # clear the results you don't need.
+        # before running this, it is better to commit or stage the results you want to keep by git
+        # make sure you have the correct file name.
+        clear_files("DQN_rb_tn-r1-t20000-bs128-0330_15_38_33.npy")
 
