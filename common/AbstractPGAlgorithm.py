@@ -209,7 +209,7 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
             write_to_tensorboard("train/value_loss", critic_loss, i)
             for key, value in log_infos.items():
                 write_to_tensorboard(f"train/{key}", value, i)
-                if key == "approx_kl_div":
+                if key == "approx_kl":
                     episode_approx_kl_div_list.append(value)
 
         if done or truncated:
@@ -223,7 +223,7 @@ def train_model(env:gym.Env, model:AbstractPGAlgorithm, time_steps, eval_env, ev
         else:
             state = state_
 
-        if i % eval_interval == 0 or i == time_steps:
+        if (i % eval_interval == 0 or i == time_steps) and len(episode_critic_loss_list) > 0:
             time_steps_list.append(i)
 
             eval_return = 0

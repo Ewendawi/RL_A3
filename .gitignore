@@ -11,3 +11,8 @@ logs/*
 !images/*-r10-t1000000*.png
 !experiments/*-r10-t1000000*.npy
 !results/*-r10-t1000000*
+
+
+!images/PPO*-r5-t100000*.png
+!experiments/PPO*-r5-t100000*.npy
+!results/PPO*-r5-t100000*

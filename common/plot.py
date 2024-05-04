@@ -78,9 +78,13 @@ def get_mean_value_with_filter(
         for key_t, value_t in file.items():
             data = np.array(list(value_t.values()))
             # Fix me: this is a temporary solution to remove the outliers
-            if key_t == "train" or key_t == "eval":
-                data[data > 300] = 300
-                data[data < -300] = -300
+            # if key_t == "train" or key_t == "eval": 
+            #     data[data > 300] = 300
+            #     data[data < -300] = -300
+            # elif key_t == "approx_kl_div":
+            #     data[data > 0.0125] = 0.0125
+            # elif key_t == "critic_loss":
+            #     data[data > 400] = 400
             mean_data = np.mean(data, axis=0)
             max_data = np.max(data, axis=0)
             min_data = np.min(data, axis=0)
@@ -149,7 +153,21 @@ def plot_with_dirs(
     res_map = get_mean_value_with_filter(filters, keys, smooth_window)
     plot_with_data(res_map, exp_labels, x_y_labels, save_name=save_name)
 
-
+def plot_with_keys(dirs: List[str], exp_labels: List[str], key_labels:dict):
+    filters = dirs
+    for key, labels in key_labels.items():
+        label = labels[0]
+        name = labels[1] if len(labels) > 1 else None
+        keys = ["time_steps", key]
+        plot_with_dirs(
+            filters=filters,
+            keys=keys,
+            smooth_window=9,
+            exp_labels=exp_labels,
+            x_y_labels=["time_steps", label],
+            save_name=name,
+        )
+    
 def plot_rb_tn(dirs: List[str] = [], exp_labels: List[str] = [], names=None):
     filters = dirs
 
@@ -180,6 +198,11 @@ def plot_rb_tn(dirs: List[str] = [], exp_labels: List[str] = [], names=None):
     # name = names[2] if names else None
     # plot_with_dirs(filters=filters, keys=keys, smooth_window=9, exp_labels=exp_labels, x_y_labels=["time_steps", "loss"])
 
+def plot_file_with_keys(file_path, key_labels=None):
+    data = np.load(file_path, allow_pickle=True)
+    dirs = data.item().get("dirs")
+    labels = data.item().get("labels")
+    plot_with_keys(dirs, labels, key_labels)
 
 def plot_with_file(file_path, names=None):
     data = np.load(file_path, allow_pickle=True)

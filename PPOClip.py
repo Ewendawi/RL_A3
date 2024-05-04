@@ -82,7 +82,7 @@ class PPOCritic(NormalCritic):
 
                 with torch.no_grad():
                     log_ratio = log_probs - base_log_probs
-                    approx_kl_div = torch.mean((torch.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                    approx_kl_div = torch.mean((torch.exp(log_ratio) - 1) - log_ratio).detach().cpu().item()
                     log_infos["approx_kl"].append(approx_kl_div)
 
                 if self.config.target_kl is not None and approx_kl_div > self.config.target_kl:
@@ -198,7 +198,7 @@ def exp_config_for_PPOClip(exp_name="ppo", env_name="", repeat=1, timesteps=2000
     critic_config.gamma = 0.9
     critic_config.gae_lambda = 0.9
 
-    eval_interval = 3000
+    eval_interval = 2000
     eval_env = gym.make(env_name)
     eval_episodes = 5
 

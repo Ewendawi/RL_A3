@@ -2,7 +2,7 @@
 import sys
 import getopt
 
-from common.plot import plot_with_file, clear_files
+from common.plot import plot_with_file, clear_files, plot_file_with_keys
 from common.AbstractPGAlgorithm import render_env
 import exp_reinforce
 import exp_AC
@@ -68,11 +68,17 @@ if __name__ == "__main__":
         exp_AC.experiment_steps(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
     # PPO
     # 30: test PPO
-    # 31: PPO KL
+    # 31: PPO lr
+    # 32: PPO kl_div
+    # 33: PPO repeat
     elif experiment == 30:
         exp_ppo.experiment_PPO()
     elif experiment == 31:
+        exp_ppo.experiment_ppo_lr(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 32:
         exp_ppo.experiment_ppo_kl(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
+    elif experiment == 33:
+        exp_ppo.experiment_ppo_repeat(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME)
     # utils
     # 100: render
     # 101: plot
@@ -81,7 +87,7 @@ if __name__ == "__main__":
         path = "./models/AC_Pendulum-v1_True_r1_t200000_0412_23_45_31"
         render_env(path)
     elif experiment == 101:
-        path = "experiments/reinforce-LunarLander-v2-bl-r4-t400000-0504_14_44_52.npy"
+        path = "experiments/PPO-LunarLander-v2-lr-r5-t1000000-0504_23_28_27.npy"
         names = ["train", "eval"]
         names = []
         plot_with_file(path, names=names)
@@ -91,6 +97,14 @@ if __name__ == "__main__":
         # make sure you have the correct file name.
         file_path = "experiments/reinforce-LunarLander-v2-lr-r10-t100000-0504_11_39_06.npy"
         clear_files(file_path)
+    elif experiment == 103:
+        keys = {
+            "eval": ["eval", "eval"],
+            "critic_loss": ["critic_loss", "critic_loss"],
+            "approx_kl_div": ["kl_div", "approx_kl_div"],
+        }
+        path = "experiments/PPO-LunarLander-v2-repeat-r5-t1000000-0505_00_35_22.npy"
+        plot_file_with_keys(path, keys)  
 
     
     elif experiment == 29:
