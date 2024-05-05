@@ -420,3 +420,39 @@ def experiment_AC_base_boot(multi_process=False, device_name="cpu"):
     names = [f"{exp_name}_train", f"{exp_name}_eval"]
     plot_with_file(file, names=names)
 
+def experiment_AC_nstep_nobase(multi_process=False, device_name="cpu"):
+#YES bootstrapping
+#No baseline substraction
+    
+    dirs = []
+    run_multi_process = multi_process 
+    repeat = 5
+    time_steps = 1000000  
+    n_step=16
+    env_name = "LunarLander-v2"
+    nsteps = [5, 16, 50]
+    exp_name = f"AC-{env_name}-r{repeat}-t{time_steps}"
+    entropy_weight = 0.001
+
+    for nstep in nsteps:
+        exp_config = exp_config_for_AC(exp_name=exp_name, env_name=env_name, repeat=repeat, timesteps=time_steps, device_name=device_name)
+        exp_config.actor_config.nstep = nstep
+        exp_config.actor_config.entropy_weight = entropy_weight
+        exp_config.critic_config.use_base_line = False
+        exp_config.critic_config.n_steps = n_step
+        # exp_config.tensorboard_dir = f"{exp_name}_nstep_{nstep}"
+        exp_config.update_dir_name(suffix=f"nstep_nobase{nstep}")
+        run_experiment(exp_config=exp_config, multi_process=run_multi_process)
+        dirs.append(exp_config.dir_name)
+
+    if run_multi_process:
+        join_processes()
+        clean_processes()
+
+    exp_labels = ["nstep_nobase" + str(nstep) for nstep in nsteps]
+    file = write_dirs_to_file(dirs=dirs, labels=exp_labels, file_name=exp_name)
+
+    names = [f"{exp_name}_train", f"{exp_name}_eval"]
+    plot_with_file(file, names=names)
+
+
