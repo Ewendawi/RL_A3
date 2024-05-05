@@ -1,6 +1,7 @@
 __pycache__
 *.png
 results/*
+venv/*
 experiments/*
 images/*
 models/*
