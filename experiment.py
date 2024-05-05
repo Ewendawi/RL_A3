@@ -127,4 +127,8 @@ if __name__ == "__main__":
         print('Running experiment actor-critic base_boot')
         exp_AC.experiment_AC_base_boot(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME )
 
+    elif experiment == 42:
+        print('Running experiment actor-critic nstep-no baseline')
+        exp_AC.experiment_AC_nstep_nobase(multi_process=USE_MULTI_PROCESS, device_name=DEVICE_NAME )
+
 
