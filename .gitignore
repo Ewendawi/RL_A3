@@ -2,6 +2,7 @@ __pycache__
 *.png
 results/*
 venv/*
+.DS_Store
 experiments/*
 images/*
 models/*
